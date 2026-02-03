@@ -65,7 +65,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips
+          sudo apt-get install -y libvips-dev
 
       - name: Run Brakeman
         run: bundle exec brakeman -q --exit-on-warn --format sarif --output brakeman.sarif
@@ -135,7 +135,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips
+          sudo apt-get install -y libvips-dev
           wget -q -O pdfium-linux.tgz "https://github.com/docusealco/pdfium-binaries/releases/latest/download/pdfium-linux-x64.tgz"
           sudo tar -xzf pdfium-linux.tgz --strip-components=1 -C /usr/lib lib/libpdfium.so
           rm -f pdfium-linux.tgz
@@ -217,7 +217,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips
+          sudo apt-get install -y libvips-dev
           wget -q -O pdfium-linux.tgz "https://github.com/docusealco/pdfium-binaries/releases/latest/download/pdfium-linux-x64.tgz"
           sudo tar -xzf pdfium-linux.tgz --strip-components=1 -C /usr/lib lib/libpdfium.so
           rm -f pdfium-linux.tgz

@@ -592,6 +592,8 @@ en: &en
   account_has_been_updated: Account has been updated.
   account_has_been_removed: Account has been removed.
   logo_has_been_uploaded: Logo has been uploaded.
+  logo_has_been_removed: Logo has been removed.
+  please_select_a_file: Please select a file.
   invalid_file_type: Invalid file type
   upload_file: Upload file
   upgrade_your_plan_to_invite_more_users_contact_email: 'Upgrade your plan to invite more users (contact %{email}).'

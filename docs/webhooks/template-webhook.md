@@ -3,7 +3,9 @@
 Get template creation and update notifications using these events:
 
 - **'template.created'** is triggered when the template is created.
-- **'tempate.updated'** is triggered when the template is updated.
+- **'template.updated'** is triggered when the template is updated.
+
+It's important to note that each of these events contain information available at the time of dispatch, so some data may be missing or incomplete depending on the specific event. Failed webhook requests (4xx, 5xx) are automatically retried with exponential backoff (`2^attempt` minutes). Retries are attempted up to 10 times for template events.  
 
 
 

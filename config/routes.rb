@@ -182,7 +182,10 @@ Rails.application.routes.draw do
                                defaults: { status: :archived }
     resources :integration_users, only: %i[index], path: 'users/:status', controller: 'users',
                                   defaults: { status: :integration }
-    resource :personalization, only: %i[show create], controller: 'personalization_settings'
+    resource :personalization, only: %i[show create], controller: 'personalization_settings' do
+      post :upload_logo
+      delete :destroy_logo
+    end
     resources :webhooks, only: %i[index show new create update destroy], controller: 'webhook_settings' do
       post :resend
 

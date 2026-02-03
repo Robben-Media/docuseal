@@ -35,6 +35,24 @@ class PersonalizationSettingsController < ApplicationController
     redirect_back(fallback_location: settings_personalization_path, notice: I18n.t('settings_have_been_saved'))
   end
 
+  def upload_logo
+    authorize!(:manage, AccountConfig)
+
+    if params[:logo].present?
+      current_account.company_logo.attach(params[:logo])
+      redirect_to settings_personalization_path, notice: I18n.t('logo_has_been_uploaded')
+    else
+      redirect_to settings_personalization_path, alert: I18n.t('please_select_a_file')
+    end
+  end
+
+  def destroy_logo
+    authorize!(:manage, AccountConfig)
+
+    current_account.company_logo.purge
+    redirect_to settings_personalization_path, notice: I18n.t('logo_has_been_removed')
+  end
+
   private
 
   def load_and_authorize_account_config

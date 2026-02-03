@@ -1,13 +1,13 @@
 # Form Webhook
 
-During the form filling and signing process, 3 types of events may occur and are dispatched at different stages:
+During the form filling and signing process, 4 types of events may occur and are dispatched at different stages:
 
 - **'form.viewed'** event is triggered when the submitter first opens the form.
 - **'form.started'** event is triggered when the submitter initiates filling out the form.
 - **'form.completed'** event is triggered upon successful form completion and signing by one of the parties.
 - **'form.declined'** event is triggered when a signer declines the submission.
 
- It's important to note that each of these events contain information available at the time of dispatch, so some data may be missing or incomplete depending on the specific event. Failed webhook requests (4xx, 5xx) are automatically retried multiple times within 48 hours (every 2^attempt minutes) for all production accounts.  
+ It's important to note that each of these events contain information available at the time of dispatch, so some data may be missing or incomplete depending on the specific event. Failed webhook requests (4xx, 5xx) are automatically retried with exponential backoff (`2^attempt` minutes). Retries are attempted up to 10 times for `form.viewed`, `form.started`, and `form.declined`, and up to 12 times for `form.completed`.  
 **Related Guides**  
 [Download Signed Documents](https://www.docuseal.com/guides/download-signed-documents)
 
@@ -19,7 +19,8 @@ During the form filling and signing process, 3 types of events may occur and are
     "enum": [
       "form.viewed",
       "form.started",
-      "form.completed"
+      "form.completed",
+      "form.declined"
     ]
   },
   "timestamp": {

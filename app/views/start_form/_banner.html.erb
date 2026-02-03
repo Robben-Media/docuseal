@@ -1,1 +1,7 @@
-<%= render 'start_form/docuseal_logo' %>
+<% if @submitter&.account&.company_logo&.attached? %>
+  <div class="flex justify-center items-center py-4">
+    <%= image_tag url_for(@submitter.account.company_logo), class: 'max-h-16 max-w-xs object-contain' %>
+  </div>
+<% else %>
+  <%= render 'start_form/docuseal_logo' %>
+<% end %>

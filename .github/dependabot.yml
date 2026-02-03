@@ -1,0 +1,102 @@
+---
+version: 2
+
+registries:
+  ghcr:
+    type: docker-registry
+    url: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
+
+updates:
+  # Ruby dependencies (Bundler)
+  - package-ecosystem: bundler
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Chicago
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(ruby)"
+    labels:
+      - dependencies
+      - ruby
+    groups:
+      rails:
+        patterns:
+          - "rails*"
+          - "activerecord*"
+          - "actionpack*"
+          - "activesupport*"
+      testing:
+        patterns:
+          - "rspec*"
+          - "capybara*"
+          - "factory_bot*"
+          - "faker"
+      security:
+        patterns:
+          - "devise*"
+          - "cancancan"
+          - "brakeman"
+
+  # JavaScript dependencies (npm/yarn)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Chicago
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(js)"
+    labels:
+      - dependencies
+      - javascript
+    groups:
+      webpack:
+        patterns:
+          - "webpack*"
+          - "shakapacker*"
+          - "babel*"
+      eslint:
+        patterns:
+          - "eslint*"
+      tailwind:
+        patterns:
+          - "tailwindcss*"
+          - "postcss*"
+          - "autoprefixer"
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Chicago
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - dependencies
+      - github-actions
+
+  # Docker dependencies
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: monthly
+      day: monday
+      time: "09:00"
+      timezone: America/Chicago
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "deps(docker)"
+    labels:
+      - dependencies
+      - docker

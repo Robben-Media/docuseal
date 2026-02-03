@@ -7,6 +7,8 @@ Get submission creation, completion, expiration, and archiving notifications usi
 - **'submission.expired'** event is triggered when the submission expires.
 - **'submission.archived'** event is triggered when the submission is archived.
 
+It's important to note that each of these events contain information available at the time of dispatch, so some data may be missing or incomplete depending on the specific event. Failed webhook requests (4xx, 5xx) are automatically retried with exponential backoff (`2^attempt` minutes). Retries are attempted up to 10 times for submission events.  
+
 
 
 ```json
@@ -14,10 +16,12 @@ Get submission creation, completion, expiration, and archiving notifications usi
   "event_type": {
     "type": "string",
     "description": "The event type.",
-    "enum": [
-      "submission.created",
-      "submission.archived"
-    ]
+      "enum": [
+        "submission.created",
+        "submission.completed",
+        "submission.expired",
+        "submission.archived"
+      ]
   },
   "timestamp": {
     "type": "string",

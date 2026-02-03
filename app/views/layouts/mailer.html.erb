@@ -6,6 +6,11 @@
     <style></style>
   </head>
   <body dir="<%= TextUtils.rtl?(yield) ? 'rtl' : 'auto' %>">
+    <% if @current_account&.company_logo&.attached? %>
+      <p style="margin-bottom: 20px;">
+        <%= image_tag url_for(@current_account.company_logo), style: 'max-height: 60px; max-width: 200px;' %>
+      </p>
+    <% end %>
     <%= yield %>
     <%= render partial: 'shared/mailer_attribution' %>
   </body>

@@ -1,1 +1,25 @@
-<%= render 'logo_placeholder' %>
+<div class="my-4">
+  <% if current_account.company_logo.attached? %>
+    <div class="flex items-center space-x-4 mb-4">
+      <%= image_tag url_for(current_account.company_logo), class: 'max-h-20 max-w-xs object-contain' %>
+      <%= button_to settings_personalization_destroy_logo_path, method: :delete, class: 'btn btn-sm btn-outline btn-error', data: { turbo_confirm: t('are_you_sure') } do %>
+        <%= svg_icon('trash', class: 'w-4 h-4') %>
+        <%= t('remove') %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= form_with url: settings_personalization_upload_logo_path, method: :post, html: { enctype: 'multipart/form-data' }, class: 'space-y-4' do |f| %>
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text"><%= t('upload_logo') %></span>
+      </label>
+      <input type="file" name="logo" accept="image/*" class="file-input file-input-bordered w-full max-w-xs" required>
+      <label class="label">
+        <span class="label-text-alt"><%= t('your_company_logo') %></span>
+      </label>
+    </div>
+    <div class="form-control">
+      <%= f.submit t('upload'), class: 'base-button w-full max-w-xs' %>
+    </div>
+  <% end %>
+</div>

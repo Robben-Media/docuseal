@@ -521,7 +521,30 @@ module Submissions
       !submission.source.in?(%w[embed api])
     end
 
-    def add_logo(column, _submission = nil)
+    def add_logo(column, submission = nil)
+      account = submission&.account
+      if account&.company_logo&.attached?
+        begin
+          logo_blob = account.company_logo.blob
+          logo_data = logo_blob.download
+          logo_io = StringIO.new(logo_data)
+          column.image(logo_io, height: 40, position: :float)
+
+          column.formatted_text([{ text: account.name }],
+                                font_size: 20,
+                                font: [FONT_NAME, { variant: :bold }],
+                                width: 200,
+                                padding: [5, 0, 0, 8],
+                                position: :float, text_align: :left)
+        rescue StandardError
+          add_default_logo(column)
+        end
+      else
+        add_default_logo(column)
+      end
+    end
+
+    def add_default_logo(column)
       column.image(PdfIcons.logo_io, width: 40, height: 40, position: :float)
 
       column.formatted_text([{ text: 'DocuSeal',

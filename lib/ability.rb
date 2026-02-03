@@ -5,14 +5,12 @@ class Ability
 
   def initialize(user)
     case user.role
-    when User::ADMIN_ROLE
+    when User::ADMIN_ROLE, 'integration'
       admin_abilities(user)
     when User::EDITOR_ROLE
       editor_abilities(user)
     when User::VIEWER_ROLE
       viewer_abilities(user)
-    else
-      admin_abilities(user)
     end
   end
 

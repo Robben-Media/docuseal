@@ -2,13 +2,13 @@
   <% if current_account.company_logo.attached? %>
     <div class="flex items-center space-x-4 mb-4">
       <%= image_tag url_for(current_account.company_logo), class: 'max-h-20 max-w-xs object-contain' %>
-      <%= button_to settings_personalization_destroy_logo_path, method: :delete, class: 'btn btn-sm btn-outline btn-error', data: { turbo_confirm: t('are_you_sure') } do %>
+      <%= button_to destroy_logo_settings_personalization_path, method: :delete, class: 'btn btn-sm btn-outline btn-error', data: { turbo_confirm: t('are_you_sure') } do %>
         <%= svg_icon('trash', class: 'w-4 h-4') %>
         <%= t('remove') %>
       <% end %>
     </div>
   <% end %>
-  <%= form_with url: settings_personalization_upload_logo_path, method: :post, html: { enctype: 'multipart/form-data' }, class: 'space-y-4' do |f| %>
+  <%= form_with url: upload_logo_settings_personalization_path, method: :post, html: { enctype: 'multipart/form-data' }, class: 'space-y-4' do |f| %>
     <div class="form-control">
       <label class="label">
         <span class="label-text"><%= t('upload_logo') %></span>

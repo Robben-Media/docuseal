@@ -1,0 +1,116 @@
+---
+name: Sync Upstream
+
+on:
+  schedule:
+    # Run weekly on Sunday at midnight
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to sync"
+        required: false
+        default: master
+        type: string
+
+jobs:
+  sync:
+    name: Sync with Upstream
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/docusealco/docuseal.git || true
+          git fetch upstream
+
+      - name: Sync branch
+        id: sync
+        run: |
+          BRANCH="${{ github.event.inputs.branch || 'master' }}"
+          echo "Syncing branch: $BRANCH"
+
+          # Check if there are new commits
+          LOCAL=$(git rev-parse HEAD)
+          UPSTREAM=$(git rev-parse upstream/$BRANCH)
+
+          if [[ "$LOCAL" == "$UPSTREAM" ]]; then
+            echo "Already up to date"
+            echo "synced=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "New commits available from upstream"
+          echo "synced=true" >> $GITHUB_OUTPUT
+
+          # Get list of changed files
+          git log --oneline HEAD..upstream/$BRANCH > /tmp/new_commits.txt
+          cat /tmp/new_commits.txt
+
+      - name: Create sync PR
+        if: steps.sync.outputs.synced == 'true'
+        run: |
+          BRANCH="${{ github.event.inputs.branch || 'master' }}"
+          SYNC_BRANCH="sync/upstream-$(date +%Y%m%d)"
+
+          # Create sync branch
+          git checkout -b $SYNC_BRANCH
+
+          # Merge upstream (may have conflicts)
+          if git merge upstream/$BRANCH --no-edit; then
+            git push origin $SYNC_BRANCH
+
+            # Create PR
+            gh pr create \
+              --title "Sync upstream changes ($(date +%Y-%m-%d))" \
+              --body "This PR syncs changes from upstream docusealco/docuseal.
+
+## New commits from upstream:
+\`\`\`
+$(cat /tmp/new_commits.txt)
+\`\`\`
+
+Please review carefully, especially for conflicts with our customizations." \
+              --base $BRANCH \
+              --head $SYNC_BRANCH \
+              --label "upstream-sync"
+          else
+            echo "Merge conflicts detected. Manual intervention required."
+            echo "## Merge Conflicts" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Automatic merge failed. Please sync manually:" >> $GITHUB_STEP_SUMMARY
+            echo '```bash' >> $GITHUB_STEP_SUMMARY
+            echo "git fetch upstream" >> $GITHUB_STEP_SUMMARY
+            echo "git merge upstream/$BRANCH" >> $GITHUB_STEP_SUMMARY
+            echo "# Resolve conflicts, then:" >> $GITHUB_STEP_SUMMARY
+            echo "git push origin $BRANCH" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          if [[ "${{ steps.sync.outputs.synced }}" == "true" ]]; then
+            echo "## Upstream Sync" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "New changes detected and PR created for review." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Upstream Sync" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Fork is already up to date with upstream." >> $GITHUB_STEP_SUMMARY
+          fi

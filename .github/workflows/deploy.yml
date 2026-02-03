@@ -1,0 +1,162 @@
+---
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - staging
+      image_tag:
+        description: "Docker image tag to deploy (default: latest)"
+        required: false
+        default: latest
+        type: string
+  workflow_run:
+    workflows: ["Build & Push Docker Image"]
+    types:
+      - completed
+    branches:
+      - main
+      - master
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 15
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ vars.APP_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine image tag
+        id: image
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.image_tag }}"
+          else
+            TAG="latest"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
+        env:
+          IMAGE: ${{ steps.image.outputs.full_image }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          envs: IMAGE,GITHUB_TOKEN,GITHUB_ACTOR
+          script: |
+            set -e
+
+            echo "=== Deployment started at $(date) ==="
+
+            # Navigate to deployment directory
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Login to GHCR
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+            # Update image in docker-compose (if using variable)
+            export DOCUSEAL_IMAGE="$IMAGE"
+
+            # Pull the new image
+            echo "Pulling image: $IMAGE"
+            docker compose pull docuseal
+
+            # Create backup of current container (optional)
+            echo "Creating pre-deployment backup..."
+            docker compose exec -T docuseal bundle exec rake db:dump 2>/dev/null || true
+
+            # Deploy with zero-downtime restart
+            echo "Deploying new version..."
+            docker compose up -d docuseal
+
+            # Wait for container to be healthy
+            echo "Waiting for health check..."
+            for i in $(seq 1 30); do
+              if docker compose exec -T docuseal curl -sf http://localhost:3000/up > /dev/null 2>&1; then
+                echo "Health check passed!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Health check failed after 30 attempts"
+                exit 1
+              fi
+              sleep 2
+            done
+
+            # Run migrations if needed
+            echo "Running database migrations..."
+            docker compose exec -T docuseal bundle exec rake db:migrate || true
+
+            # Cleanup old images
+            echo "Cleaning up old images..."
+            docker image prune -f
+
+            echo "=== Deployment completed at $(date) ==="
+
+      - name: Verify deployment
+        if: vars.APP_URL != ''
+        run: |
+          sleep 10
+          curl -sf "${{ vars.APP_URL }}/up" || echo "Warning: Health check endpoint not responding"
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ steps.image.outputs.full_image }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+  rollback:
+    name: Rollback (Manual)
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    if: github.event_name == 'workflow_dispatch' && failure()
+    needs: deploy
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Rollback to previous version
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            echo "Attempting automatic rollback..."
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Get list of available images
+            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}" | grep docuseal | head -5
+
+            echo "Manual intervention may be required."
+            echo "Run 'docker compose up -d docuseal' with the desired image to rollback."

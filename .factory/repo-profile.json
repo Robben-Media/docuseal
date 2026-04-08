@@ -1,0 +1,1 @@
+{"type":"infra","securityScan":{"enabled":true,"schedule":"0 9 * * 1"},"docsAutomation":{"enabled":false},"issueToPR":{"enabled":false},"testingAutomation":{"enabled":false},"gitHooks":{"enforceConventionalCommits":true,"protectBranches":true}}
